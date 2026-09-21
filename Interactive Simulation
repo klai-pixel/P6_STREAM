@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<style>
+  .sim-container {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    max-width: 820px;
+    margin: 15px auto;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    color: #1e293b;
+  }
+  .sim-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .sim-header h3 {
+    margin: 0 0 6px 0;
+    color: #0f766e;
+    font-size: 1.4rem;
+  }
+  .sim-header p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #64748b;
+  }
+  .main-stage {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    background: #ffffff;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+  }
+  .canvas-box {
+    flex: 1 1 420px;
+    position: relative;
+    background: #f1f5f9;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 380px;
+    overflow: hidden;
+  }
+  .controls-box {
+    flex: 1 1 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    justify-content: center;
+  }
+  .control-group {
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+  }
+  .control-group label {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: #334155;
+  }
+  .slider {
+    width: 100%;
+    accent-color: #0d9488;
+    cursor: pointer;
+  }
+  .preset-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .btn-sm {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    border: 1px solid #0d9488;
+    background: #f0fdfa;
+    color: #0f766e;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-sm:hover {
+    background: #ccfbf1;
+  }
+  .btn-action {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    background: #0d9488;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 6px rgba(13,148,136,0.3);
+    transition: all 0.2s;
+  }
+  .btn-action:hover {
+    background: #0f766e;
+  }
+  .btn-toggle-deadzone {
+    background: #e11d48;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .btn-toggle-deadzone:hover {
+    background: #be123c;
+  }
+  .data-dashboard {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 15px;
+  }
+  .data-card {
+    background: #f8fafc;
+    border-left: 4px solid #0d9488;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+  .data-card.alert {
+    border-left-color: #e11d48;
+    background: #fff1f2;
+  }
+  .data-card .val {
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: #0f766e;
+    margin-top: 2px;
+  }
+  .data-card.alert .val {
+    color: #be123c;
+  }
+</style>
+</head>
+<body>
+
+<div class="sim-container">
+  <div class="sim-header">
+    <h3>🌱 智慧澆水器：體積、底面積與死水區模擬</h3>
+    <p>拉動滑桿改變器皿形狀與注水量，觀察 micro:bit 抽水吸管的抽水極限</p>
+  </div>
+
+  <div class="main-stage">
+    <!-- SVG 畫布區域 -->
+    <div class="canvas-box">
+      <svg id="simSvg" width="400" height="360" viewBox="0 0 400 360">
+        <!-- 背景桌面 -->
+        <line x1="20" y1="310" x2="380" y2="310" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+        
+        <!-- 左側：黃金葛盆栽 (仿照片學生彩繪風格) -->
+        <g id="plantPot" transform="translate(30, 150)">
+          <!-- 花盆本體 -->
+          <path d="M 15,90 L 25,160 L 85,160 L 95,90 Z" fill="#fbcfe8" stroke="#f472b6" stroke-width="2"/>
+          <!-- 彩虹塗鴉裝飾 -->
+          <path d="M 30,130 Q 55,100 80,130" fill="none" stroke="#f87171" stroke-width="4"/>
+          <path d="M 32,135 Q 55,108 78,135" fill="none" stroke="#fbbf24" stroke-width="4"/>
+          <path d="M 34,140 Q 55,116 76,140" fill="none" stroke="#34d399" stroke-width="4"/>
+          <!-- 植物葉片 (黃金葛) -->
+          <path id="leaf1" d="M 55,90 Q 30,40 20,60 Q 35,80 55,90" fill="#22c55e"/>
+          <path id="leaf2" d="M 55,90 Q 60,30 85,45 Q 80,75 55,90" fill="#16a34a"/>
+          <path id="leaf3" d="M 55,90 Q 50,15 40,30 Q 45,70 55,90" fill="#4ade80"/>
+          <!-- 植物水分狀態圖標 -->
+          <text id="plantStatus" x="55" y="80" text-anchor="middle" font-size="20">💧</text>
+        </g>
+
+        <!-- 中間：micro:bit 控制支架與伺服馬達 -->
+        <g id="microbitRig" transform="translate(155, 120)">
+          <!-- 積木立柱 -->
+          <rect x="15" y="70" width="26" height="120" fill="#0284c7" rx="3" stroke="#0369a1" stroke-width="1.5"/>
+          <!-- micro:bit 板身 -->
+          <rect x="0" y="145" width="56" height="42" fill="#1e293b" rx="4"/>
+          <circle cx="10" cy="155" r="3" fill="#f59e0b"/>
+          <circle cx="46" cy="155" r="3" fill="#f59e0b"/>
+          <rect x="18" y="155" width="20" height="20" fill="#334155"/>
+          <!-- 伺服馬達 -->
+          <rect x="12" y="45" width="32" height="30" fill="#0f172a" rx="2"/>
+          <!-- 馬達搖臂與吸水吸管 (粉紅色) -->
+          <g id="strawArm" transform="rotate(0, 28, 60)">
+            <line x1="-35" y1="60" x2="150" y2="90" stroke="#f43f5e" stroke-width="5" stroke-linecap="round"/>
+            <line x1="-35" y1="60" x2="-25" y2="90" stroke="#f43f5e" stroke-width="4" stroke-linecap="round"/>
+          </g>
+        </g>
+
+        <!-- 右側：盛水長方體容器 (動態渲染) -->
+        <g id="reservoirGroup">
+          <!-- 水位與容器會在 JavaScript 動態更新 -->
+        </g>
+      </svg>
+    </div>
+
+    <!-- 操控面板 -->
+    <div class="controls-box">
+      <!-- 控制項目 1：底面邊長 -->
+      <div class="control-group">
+        <label>
+          <span>長方體底面邊長 ($s$):</span>
+          <span id="sideVal" style="color:#0d9488;">10 cm ($100\text{ cm}^2$)</span>
+        </label>
+        <input type="range" id="sideSlider" class="slider" min="4" max="15" step="1" value="10">
+        <div class="preset-buttons">
+          <button class="btn-sm" onclick="setPreset(5)">切換容器 A (5×5)</button>
+          <button class="btn-sm" onclick="setPreset(10)">切換容器 B (10×10)</button>
+        </div>
+      </div>
+
+      <!-- 控制項目 2：注水總量 -->
+      <div class="control-group">
+        <label>
+          <span>注入水容量 ($V$):</span>
+          <span id="volumeVal" style="color:#0284c7;">200 mL</span>
+        </label>
+        <input type="range" id="volSlider" class="slider" min="10" max="1200" step="10" value="200">
+        <div class="preset-buttons">
+          <button class="btn-sm" onclick="setWater(40)">1天需水 (40mL)</button>
+          <button class="btn-sm" onclick="setWater(200)">5天需水 (200mL)</button>
+          <button class="btn-sm" onclick="setWater(700)">全滿安全水 (700mL)</button>
+        </div>
+      </div>
+
+      <!-- 互動功能按鈕 -->
+      <div style="display:flex; gap:10px;">
+        <button class="btn-toggle-deadzone" id="deadzoneBtn" onclick="toggleDeadZone()">
+          🔍 標示死水區 (5cm)
+        </button>
+        <button class="btn-action" style="flex:1;" onclick="startWatering()">
+          ▶ 啟動自動澆水
+        </button>
+      </div>
+
+      <!-- 實時數學數據計算面版 -->
+      <div class="data-dashboard">
+        <div class="data-card">
+          <div>目前總水深 ($h = V \div A$)</div>
+          <div class="val" id="dispHeight">2.0 cm</div>
+        </div>
+        <div class="data-card alert" id="cardDeadZone">
+          <div>抽水盲區水深 (死水區)</div>
+          <div class="val" id="dispDeadHeight">5.0 cm (需 500mL)</div>
+        </div>
+        <div class="data-card">
+          <div>有效可抽取水量</div>
+          <div class="val" id="dispUsableWater" style="color:#16a34a;">0 mL</div>
+        </div>
+        <div class="data-card">
+          <div>水資源利用效率</div>
+          <div class="val" id="dispEfficiency">0 %</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 狀態變數
+  let sideLength = 10; // cm
+  let totalVolume = 200; // mL
+  const containerHeight = 12; // cm (固定容器總高)
+  const deadZoneHeight = 5; // cm (抽水管離底盲區固定為 5cm)
+  let showDeadZone = true;
+  let isWatering = false;
+
+  const sideSlider = document.getElementById('sideSlider');
+  const volSlider = document.getElementById('volSlider');
+  const sideVal = document.getElementById('sideVal');
+  const volumeVal = document.getElementById('volumeVal');
+  const dispHeight = document.getElementById('dispHeight');
+  const dispDeadHeight = document.getElementById('dispDeadHeight');
+  const dispUsableWater = document.getElementById('dispUsableWater');
+  const dispEfficiency = document.getElementById('dispEfficiency');
+  const plantStatus = document.getElementById('plantStatus');
+  const deadzoneBtn = document.getElementById('deadzoneBtn');
+
+  function update() {
+    const baseArea = sideLength * sideLength;
+    const waterHeight = totalVolume / baseArea;
+    const deadVolume = baseArea * deadZoneHeight;
+    const usableWater = Math.max(0, totalVolume - deadVolume);
+    const efficiency = totalVolume > 0 ? ((usableWater / totalVolume) * 100).toFixed(1) : 0;
+
+    // 更新數值文字
+    sideVal.innerHTML = `${sideLength} cm (${baseArea} cm²)`;
+    volumeVal.innerHTML = `${totalVolume} mL`;
+    dispHeight.innerHTML = `${waterHeight.toFixed(2)} cm`;
+    dispDeadHeight.innerHTML = `5.0 cm (佔 ${deadVolume} mL)`;
+    dispUsableWater.innerHTML = `${usableWater.toFixed(0)} mL`;
+    dispEfficiency.innerHTML = `${efficiency} %`;
+
+    if (waterHeight <= deadZoneHeight) {
+      dispUsableWater.style.color = '#e11d48';
+      plantStatus.textContent = '🥀';
+    } else {
+      dispUsableWater.style.color = '#16a34a';
+      plantStatus.textContent = '🌿';
+    }
+
+    renderReservoir(baseArea, waterHeight);
+  }
+
+  function renderReservoir(baseArea, waterHeight) {
+    const group = document.getElementById('reservoirGroup');
+    group.innerHTML = '';
+
+    // 繪圖座標映射：1cm = 12px
+    const pxPerCm = 12;
+    const tableY = 310;
+    const containerWidthPx = sideLength * pxPerCm;
+    const containerHeightPx = containerHeight * pxPerCm;
+    const startX = 350 - containerWidthPx;
+    const startY = tableY - containerHeightPx;
+
+    const waterHeightPx = Math.min(waterHeight, containerHeight) * pxPerCm;
+    const deadZoneHeightPx = deadZoneHeight * pxPerCm;
+
+    // 1. 容器外框 (透明長方體剖面)
+    const rectOutline = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rectOutline.setAttribute("x", startX);
+    rectOutline.setAttribute("y", startY);
+    rectOutline.setAttribute("width", containerWidthPx);
+    rectOutline.setAttribute("height", containerHeightPx);
+    rectOutline.setAttribute("fill", "rgba(226, 232, 240, 0.4)");
+    rectOutline.setAttribute("stroke", "#64748b");
+    rectOutline.setAttribute("stroke-width", "2.5");
+    rectOutline.setAttribute("rx", "2");
+    group.appendChild(rectOutline);
+
+    // 2. 水體 (藍色)
+    if (waterHeightPx > 0) {
+      const waterRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      waterRect.setAttribute("x", startX + 2);
+      waterRect.setAttribute("y", tableY - waterHeightPx);
+      waterRect.setAttribute("width", containerWidthPx - 4);
+      waterRect.setAttribute("height", waterHeightPx);
+      waterRect.setAttribute("fill", "#38bdf8");
+      waterRect.setAttribute("opacity", "0.75");
+      group.appendChild(waterRect);
+    }
+
+    // 3. 死水區標示 (紅色警戒虛線與填充)
+    if (showDeadZone) {
+      const deadRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      deadRect.setAttribute("x", startX + 2);
+      deadRect.setAttribute("y", tableY - deadZoneHeightPx);
+      deadRect.setAttribute("width", containerWidthPx - 4);
+      deadRect.setAttribute("height", deadZoneHeightPx);
+      deadRect.setAttribute("fill", "rgba(244, 63, 94, 0.25)");
+      deadRect.setAttribute("stroke", "#e11d48");
+      deadRect.setAttribute("stroke-dasharray", "4,3");
+      deadRect.setAttribute("stroke-width", "1.5");
+      group.appendChild(deadRect);
+
+      // 死水區標註字
+      const deadText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      deadText.setAttribute("x", startX + containerWidthPx / 2);
+      deadText.setAttribute("y", tableY - (deadZoneHeightPx / 2) + 4);
+      deadText.setAttribute("text-anchor", "middle");
+      deadText.setAttribute("font-size", "11");
+      deadText.setAttribute("fill", "#9f1239");
+      deadText.setAttribute("font-weight", "bold");
+      deadText.textContent = `死水區 5cm (${(sideLength*sideLength*5)}mL)`;
+      group.appendChild(deadText);
+    }
+
+    // 4. 抽水吸管 (深入容器至 5cm 高處)
+    const strawLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    const strawTipX = startX + 20;
+    const strawTipY = tableY - deadZoneHeightPx;
+    strawLine.setAttribute("points", `183,180 ${strawTipX},${startY - 10} ${strawTipX},${strawTipY}`);
+    strawLine.setAttribute("fill", "none");
+    strawLine.setAttribute("stroke", "#f43f5e");
+    strawLine.setAttribute("stroke-width", "4");
+    strawLine.setAttribute("stroke-linecap", "round");
+    strawLine.setAttribute("stroke-linejoin", "round");
+    group.appendChild(strawLine);
+
+    // 吸管抽水吸口圓點
+    const strawTip = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    strawTip.setAttribute("cx", strawTipX);
+    strawTip.setAttribute("cy", strawTipY);
+    strawTip.setAttribute("r", "4");
+    strawTip.setAttribute("fill", "#be123c");
+    group.appendChild(strawTip);
+
+    // 5. 刻度線與水深文字標註
+    const heightText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    heightText.setAttribute("x", startX - 8);
+    heightText.setAttribute("y", tableY - waterHeightPx + 4);
+    heightText.setAttribute("text-anchor", "end");
+    heightText.setAttribute("font-size", "11");
+    heightText.setAttribute("font-weight", "bold");
+    heightText.setAttribute("fill", "#0284c7");
+    heightText.textContent = `${waterHeight.toFixed(1)}cm`;
+    group.appendChild(heightText);
+  }
+
+  function setPreset(side) {
+    sideLength = side;
+    sideSlider.value = side;
+    update();
+  }
+
+  function setWater(vol) {
+    totalVolume = vol;
+    volSlider.value = vol;
+    update();
+  }
+
+  function toggleDeadZone() {
+    showDeadZone = !showDeadZone;
+    deadzoneBtn.innerHTML = showDeadZone ? '🔍 隱藏死水區' : '🔍 標示死水區 (5cm)';
+    update();
+  }
+
+  function startWatering() {
+    if (isWatering) return;
+    const baseArea = sideLength * sideLength;
+    const waterHeight = totalVolume / baseArea;
+    
+    if (waterHeight <= deadZoneHeight) {
+      alert(`⚠️ 水位只有 ${waterHeight.toFixed(1)} cm，未達到吸管抽水高度 (5 cm)！水泵抽不到水，植物即將枯萎！請增加注水量或減小底面積。`);
+      return;
+    }
+
+    isWatering = true;
+    let pumped = 0;
+    const interval = setInterval(() => {
+      if (totalVolume > baseArea * deadZoneHeight && pumped < 40) {
+        totalVolume -= 2;
+        pumped += 2;
+        volSlider.value = totalVolume;
+        update();
+      } else {
+        clearInterval(interval);
+        isWatering = false;
+        alert(`✅ 澆水成功！已為植物注入 40 mL 水。容器內尚餘死水區水量。`);
+      }
+    }, 50);
+  }
+
+  // 監聽事件
+  sideSlider.addEventListener('input', (e) => {
+    sideLength = parseInt(e.target.value);
+    update();
+  });
+
+  volSlider.addEventListener('input', (e) => {
+    totalVolume = parseInt(e.target.value);
+    update();
+  });
+
+  // 初次加載
+  update();
+</script>
+</body>
+</html>
